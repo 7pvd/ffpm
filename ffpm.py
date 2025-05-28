@@ -1,7 +1,26 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+#              M""""""""`M            dP
+#              Mmmmmm   .M            88
+#              MMMMP  .MMM  dP    dP  88  .dP   .d8888b.
+#              MMP  .MMMMM  88    88  88888"    88'  `88
+#              M' .MMMMMMM  88.  .88  88  `8b.  88.  .88
+#              M         M  `88888P'  dP   `YP  `88888P'
+#              MMMMMMMMMMM    -*-  Created by Zuko  -*-
+#
+#              * * * * * * * * * * * * * * * * * * * * *
+#              * -    - -   F.R.E.E.M.I.N.D   - -    - *
+#              * -  Copyright © 2025 (Z) Programing  - *
+#              *    -  -  All Rights Reserved  -  -    *
+#              * * * * * * * * * * * * * * * * * * * * *
 import subprocess
 import sys
+
 DEPS = ['typer[all]', 'zipfile', 'shutil', 'watchdog']
 DEP_CHECK_NAMES = ['typer', 'zipfile', 'shutil', 'watchdog']
+
+
 def ensure_deps():
     for idx, dep in enumerate(DEP_CHECK_NAMES):
         if dep not in globals():
@@ -10,6 +29,8 @@ def ensure_deps():
             except ImportError:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", DEPS[idx]])
                 __import__(dep)
+
+
 ensure_deps()
 import os
 import shutil
@@ -20,15 +41,16 @@ import time
 import csv
 
 import signal
-from pathlib import Path
 from datetime import datetime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
 app = typer.Typer(invoke_without_command=True)
 
 FIREFOX_DIR = Path.home() / ".mozilla" / "firefox"  # Linux/macOS
 PROFILES_INI = FIREFOX_DIR / "profiles.ini"
 BACKUP_DIR = Path.home() / "firefox-profile-backups"
+
 
 def get_profile_path(profile_name_or_path: str) -> Path:
     path = Path(profile_name_or_path).expanduser().resolve()
@@ -42,8 +64,6 @@ def get_profile_path(profile_name_or_path: str) -> Path:
         return backup_path
     typer.echo(f"❌ Profile '{profile_name_or_path}' not found")
     raise typer.Exit(1)
-
-
 
 
 def detect_windows_paths():
@@ -60,18 +80,17 @@ def detect_windows_paths():
 detect_windows_paths()
 
 
-
 class WatcherHandler(FileSystemEventHandler):
-    def __init__(self, csv_path: Path, exclude_dirs=None):
+    def __init__(self, csv_path: Path, exclude_dirs = None):
         self.log_path = csv_path
         self.exclude_dirs = exclude_dirs or []
         self.events = {}
-
+        
         if not self.log_path.exists():
             with self.log_path.open('w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(["timestamp", "event_type", "file_path", "change_count"])
-
+    
     def _log(self, event_type, path):
         now = datetime.now().isoformat(timespec='seconds')
         key = (event_type, path)
@@ -79,12 +98,12 @@ class WatcherHandler(FileSystemEventHandler):
             self.events[key]["count"] += 1
         else:
             self.events[key] = {"timestamp": now, "count": 1}
-
+        
         # write/update line in csv
         with self.log_path.open('a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([now, event_type, path, self.events[key]["count"]])
-
+    
     def on_any_event(self, event):
         if any(ex in event.src_path for ex in self.exclude_dirs):
             return
@@ -100,24 +119,24 @@ class Watcher:
         self.csv_output = csv_output
         self.event_handler = WatcherHandler(csv_output, exclude_dirs=["cache2", "startupCache", "minidumps"])
         self.observer = Observer()
-
+    
     def start(self):
         print(f"👀 Starting watcher on: {self.watch_path}")
         self.observer.schedule(self.event_handler, str(self.watch_path), recursive=True)
         self.observer.start()
-
+        
         def stop_handler(sig, frame):
             self.stop()
-
+        
         signal.signal(signal.SIGINT, stop_handler)
         signal.signal(signal.SIGTERM, stop_handler)
-
+        
         try:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
             self.stop()
-
+    
     def stop(self):
         print("🛑 Stopping watcher...")
         self.observer.stop()
@@ -144,25 +163,27 @@ def get_profiles():
                 profiles[current["Name"]] = FIREFOX_DIR / current["Path"]
     return profiles
 
+
 @app.command()
 def build(
-    builder: str = typer.Option(..., "--builder", "-b", help="Build system to use: pyinstaller or briefcase")
+        builder: str = typer.Option(..., "--builder", "-b", help="Build system to use: pyinstaller or briefcase")
 ):
     """
     Build a standalone executable using the selected builder.
     """
     builder = builder.lower()
     script_file = Path(sys.argv[0]).resolve()
-
+    
     if builder == "pyinstaller":
         typer.echo("🔧 Building with PyInstaller...")
         try:
-            subprocess.run(["pyinstaller", "--onefile", "--name", "ffpm", str(script_file)], check=True)
+            subprocess.run(["pyinstaller", "--onefile", '--strip', '--icon=assets/z-cricle.ico', "--name", "ffpm",
+                            str(script_file), "--clean"], check=True)
             typer.echo("✅ Build complete: ./dist/ffpm(.exe)")
         except subprocess.CalledProcessError:
             typer.echo("❌ Build failed with PyInstaller")
             raise typer.Exit(1)
-
+    
     elif builder == "briefcase":
         typer.echo("🔧 Building with Briefcase...")
         try:
@@ -174,10 +195,11 @@ def build(
         except subprocess.CalledProcessError:
             typer.echo("❌ Build failed with Briefcase")
             raise typer.Exit(1)
-
+    
     else:
         typer.echo("❌ Unsupported builder. Use 'pyinstaller' or 'briefcase'.")
         raise typer.Exit(1)
+
 
 @app.command()
 def watch(profile_name: str = typer.Argument(...), out: str = "watch-log.csv"):
@@ -187,7 +209,7 @@ def watch(profile_name: str = typer.Argument(...), out: str = "watch-log.csv"):
     if not profile_path.exists():
         typer.echo(f"❌ Profile {profile_name} not found")
         raise typer.Exit()
-
+    
     log_file = Path(out)
     watcher = Watcher(profile_path, log_file)
     watcher.start()
@@ -219,7 +241,7 @@ def export_profile(name: str, output: Path):
 
 @app.command()
 def import_profile(zip_path, name: str):
-    if not (str(zip_path).index('/') == -1) or not(str(zip_path).index('/1') != -1):
+    if not (str(zip_path).index('/') == -1) or not (str(zip_path).index('/1') != -1):
         zip_path = get_profile_path(name)
         if not zip_path.exists():
             typer.echo("Profile not found.")
@@ -248,24 +270,21 @@ def clean(name: str):
     typer.echo("Clean completed.")
 
 
-@app.callback()
-def main(ctx: typer.Context):
-    """
-    Firefox Profile Manager CLI
-    Use one of the available commands or see --help for more info.
-    """
-    print(len(sys.argv))
-    print('ctx')
-    print(ctx.invoked_subcommand)
-    if len(sys.argv) == 1 or ctx.invoked_subcommand is None:
-        subprocess.run([sys.executable, sys.argv[0], "--help"])
-        raise typer.Exit()
+def main():
+    if os.name == "nt":
+        os.system("FFPM | Firefox Profile Manager | By Zuko")
+    exec = sys.executable
+    
+    if len(sys.argv) == 1:
+        
+        # Run help via subprocess (safe for both .py and .exe)
+        args = []
+        if 'py' in str(exec):
+            args.append(sys.argv[0])
+        subprocess.run([exec, *args, "--help"])
+        return 0
+    app(prog_name="ffpm")
 
 
 if __name__ == "__main__":
-#    app()
-#     if ctx.invoked_subcommand is None:
-#         # Gọi lại chính chương trình với --help
-#         subprocess.run([sys.executable, sys.argv[0], "--help"])
-#         raise typer.Exit()
-    app()
+    main()
