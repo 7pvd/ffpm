@@ -1,5 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+FFPM - Firefox Profile Manager
+Copyright (C) 2025 Zuko <zuko.pro>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
+
 
 #              M""""""""`M            dP
 #              Mmmmmm   .M            88
@@ -17,7 +35,7 @@
 import subprocess
 import sys
 
-DEPS = ['typer[all]', 'zipfile', 'shutil', 'watchdog']
+DEPS = ['typer[all]', None, None, 'watchdog']  # None cuz its built-in
 DEP_CHECK_NAMES = ['typer', 'zipfile', 'shutil', 'watchdog']
 
 
@@ -166,28 +184,112 @@ def get_profiles():
 
 @app.command()
 def build(
-        builder: str = typer.Option(..., "--builder", "-b", help="Build system to use: pyinstaller or briefcase")
+        builder: str = typer.Option(..., "--builder", "-b",
+                                    help="Build system to use: pyinstaller, briefcase, or nuitka")
 ):
     """
     Build a standalone executable using the selected builder.
     """
+    # Skip build command if running from built executable
+    if getattr(sys, 'frozen', False) or hasattr(sys, '_MEIPASS'):
+        typer.echo("❌ Build command not available in built executable")
+        raise typer.Exit(1)
+    
+    # Activate virtual environment if exists
+    venv_path = Path(".venv")
+    env = os.environ.copy()
+    if venv_path.exists():
+        if os.name == 'nt':  # Windows
+            venv_bin = venv_path / "Scripts"
+            venv_site_packages = venv_path / "Lib" / "site-packages"
+        else:  # Linux/macOS
+            venv_bin = venv_path / "bin"
+            # Find Python version dynamically
+            python_dirs = list((venv_path / "lib").glob("python*"))
+            if python_dirs:
+                venv_site_packages = python_dirs[0] / "site-packages"
+            else:
+                venv_site_packages = venv_path / "lib" / "python3.11" / "site-packages"  # fallback
+        
+        # Prepend venv to PATH and PYTHONPATH
+        env["PATH"] = str(venv_bin) + os.pathsep + env.get("PATH", "")
+        env["PYTHONPATH"] = str(venv_site_packages) + os.pathsep + env.get("PYTHONPATH", "")
+        typer.echo(f"🐍 Using virtual environment: {venv_bin}")
+        typer.echo(f"📦 Python packages from: {venv_site_packages}")
+    
     builder = builder.lower()
     script_file = Path(sys.argv[0]).resolve()
     
     if builder == "pyinstaller":
         typer.echo("🔧 Building with PyInstaller...")
         try:
-            subprocess.run(["pyinstaller", "--onefile", '--strip', '--icon=assets/z-cricle.ico', "--name", "ffpm",
-                            str(script_file), "--clean"], check=True)
+            subprocess.run(["pyinstaller", "--onefile", '--strip', '--icon=assets/ffpm_mac.ico', "--name", "ffpm",
+                            str(script_file), "--clean"], check=True, env=env)
             typer.echo("✅ Build complete: ./dist/ffpm(.exe)")
         except subprocess.CalledProcessError:
             typer.echo("❌ Build failed with PyInstaller")
+            raise typer.Exit(1)
+    
+    elif builder == "nuitka":
+        typer.echo("🔧 Building with Nuitka...")
+        try:
+            # Use venv Python if available
+            if venv_path.exists():
+                if os.name == 'nt':
+                    python_exe = venv_path / "Scripts" / "python.exe"
+                else:
+                    python_exe = venv_path / "bin" / "python"
+            else:
+                python_exe = "python"
+            
+            cmd = [
+                str(python_exe), "-m", "nuitka",
+                "--onefile",
+                "--standalone",
+                "--output-dir=dist",
+                "--output-filename=ffpm",
+                "--remove-output"
+            ]
+            
+            # Add icon if exists
+            if Path("assets/ffpm_mac.ico").exists():
+                cmd.extend(["--windows-icon-from-ico=assets/ffpm_mac.ico"])
+            elif Path("assets/ffpm.png").exists():
+                cmd.extend(["--linux-icon=assets/ffpm.png"])
+            
+            cmd.append(str(script_file))
+            typer.echo(f"command line (for debugging):\n {' '.join(cmd)}")
+            
+            subprocess.run(cmd, check=True, env=env)
+            typer.echo("✅ Nuitka build complete: ./dist/ffpm(.exe)")
+        except subprocess.CalledProcessError:
+            typer.echo("❌ Build failed with Nuitka")
             raise typer.Exit(1)
     
     elif builder == "briefcase":
         typer.echo("🔧 Building with Briefcase...")
         try:
             # Ensure template project structure exists
+            # do the following:
+            # Remove-Item -Path ./build -Recurse -Force
+            # Remove-Item -Path ./ffpm -Recurse -Force
+            # Remove-Item -Path ./dist -Recurse -Force
+            # mkdir ffpm
+            # cp ffpm.py ffpm/__main__.py
+            # run convert (it's long long command, so it's multiple lines below)
+            # briefcase convert -Q formal_name="FFPM - Firefox Profile Manager - Zuko"
+            # -Q description = "Simple Firefox profile manager, including import/export. Specially, you can use this tool to monitor a directory changes before/after action(s)."
+            # -Q long_description = "Simple Firefox profile manager, including import/export. Specially, you can use this tool to monitor a directory changes before/after action(s)."
+            # -Q author = "Zuko"
+            # -Q author_email = "tansautn@gmail.com"
+            # -Q url = "https://github.com/7pvd/ffpm"
+            # -Q license = "GPL-3.0"
+            # -Q version = "1.0.0"
+            # -Q icon = "assets/ffpm_mac"
+            # -Q bundle = "pro.zuko.ffpm"
+            # -Q console_app = true
+            # -Q license.file = "LICENSE.txt"
+            # -Q sources = ["ffpm"]
             subprocess.run(["briefcase", "create"], check=True)
             subprocess.run(["briefcase", "build"], check=True)
             subprocess.run(["briefcase", "package"], check=True)
@@ -197,7 +299,7 @@ def build(
             raise typer.Exit(1)
     
     else:
-        typer.echo("❌ Unsupported builder. Use 'pyinstaller' or 'briefcase'.")
+        typer.echo("❌ Unsupported builder. Use 'pyinstaller', 'nuitka', or 'briefcase'.")
         raise typer.Exit(1)
 
 
@@ -205,10 +307,14 @@ def build(
 def watch(profile_name: str = typer.Argument(...), out: str = "watch-log.csv"):
     """Watch a Firefox profile for real-time changes and log to CSV"""
     # Load your profile path from mapping or config
-    profile_path = get_profile_path(profile_name)  # implement this function
+    if Path(profile_name).exists():
+        profile_path = Path(profile_name)
+        typer.echo(f"Using direct path: {profile_path}")
+    else:
+        profile_path = get_profile_path(profile_name)
     if not profile_path.exists():
         typer.echo(f"❌ Profile {profile_name} not found")
-        raise typer.Exit()
+        raise typer.Exit(1)
     
     log_file = Path(out)
     watcher = Watcher(profile_path, log_file)
@@ -271,8 +377,6 @@ def clean(name: str):
 
 
 def main():
-    if os.name == "nt":
-        os.system("FFPM | Firefox Profile Manager | By Zuko")
     exec = sys.executable
     
     if len(sys.argv) == 1:
