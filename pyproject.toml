@@ -8,8 +8,8 @@ dependencies = [
     "shutil",
     "watchdog"
 ]
-author = [
-    {"name": "Zuko", "email" : "tansautn@gmail.com", "github": "https://github.com/tansautn"}
+authors = [
+    {name = "Zuko", email = "tansautn@gmail.com", github = "https://github.com/tansautn"}
 ]
 keywords = [
     "firefox profile",
@@ -40,3 +40,10 @@ classifiers = [
 ]
 [project.scripts]
 ffpm = "ffpm:main"
+
+[project.urls]
+Homepage = "https://github.com/7pvd/ffpm"
+Documentation = "https://github.com/7pvd/ffpm"
+Repository = "https://github.com/7pvd/ffpm.git"
+"Bug Tracker" = "https://github.com/7pvd/ffpm/issues"
+Changelog = "https://github.com/7pvd/ffpm/blob/master/CHANGELOG.md"
