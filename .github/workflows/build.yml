@@ -43,13 +43,14 @@ jobs:
           --output-dir=dist \
           --output-filename=ffpm \
           --remove-output \
+          --assume-yes-for-downloads \
           --linux-icon=${{ matrix.icon }} \
           ffpm.py
     
     - name: Build with Nuitka (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        python -m nuitka --onefile --standalone --output-dir=dist --output-filename=ffpm --remove-output --windows-icon-from-ico=${{ matrix.icon }} ffpm.py
+        python -m nuitka --onefile --standalone --output-dir=dist --output-filename=ffpm --remove-output --assume-yes-for-downloads --windows-icon-from-ico=${{ matrix.icon }} ffpm.py
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
