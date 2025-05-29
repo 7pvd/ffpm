@@ -1,0 +1,160 @@
+[project]
+name = "ffpm"
+description = "Simple Firefox profile manager, including import/export. Specially, you can use this tool to monitor a directory changes before/after action(s)."
+license = {text = "GPLv3", file = "./LICENSE.txt"}
+version = "1.0.1"
+dependencies = [
+    "nuitka>=2.7.5",
+    "typer[all]",
+    "watchdog",
+]
+authors = [
+    {name = "Zuko", email = "tansautn@gmail.com", github = "https://github.com/tansautn"}
+]
+keywords = [
+    "firefox profile",
+    "gecko profile",
+    "firefox profile manager",
+    "import profile",
+    "export profile",
+    "watch profile",
+    "directory watcher"
+]
+requires-python = ">= 3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Framework :: Celery",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Topic :: System :: Archiving",
+    "Topic :: System :: Archiving :: Backup",
+    "Topic :: System :: Monitoring",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+    "Topic :: System :: Recovery Tools",
+    "Topic :: System :: Installation/Setup",
+]
+[project.scripts]
+ffpm = "ffpm:main"
+
+[project.urls]
+Homepage = "https://github.com/7pvd/ffpm"
+Documentation = "https://github.com/7pvd/ffpm"
+Repository = "https://github.com/7pvd/ffpm.git"
+"Bug Tracker" = "https://github.com/7pvd/ffpm/issues"
+Changelog = "https://github.com/7pvd/ffpm/blob/master/CHANGELOG.md"
+
+
+
+
+
+# content below this line added by briefcase convert
+# This project was generated with 0.3.23 using template: https://github.com/beeware/briefcase-template @ v0.3.23
+[tool.briefcase]
+project_name = "FFPM - Firefox Profile Manager - Zuko"
+bundle = "pro.zuko.ffpm"
+version = "1.0.1"
+url = "https://github.com/7pvd/ffpm"
+license.file = "LICENSE"
+author = "Zuko"
+author_email = "tansautn@gmail.com"
+
+[tool.briefcase.app.ffpm]
+formal_name = "FFPM - Firefox Profile Manager - Zuko"
+description = "Simple Firefox profile manager, including import/export. Specially, you can use this tool to monitor a directory changes before/after action(s)."
+long_description = """More details about the app should go here.
+"""
+icon = "assets/ffpm_mac"
+sources = [
+    "ffpm",
+]
+test_sources = [
+    "tests",
+]
+console_app = true
+
+requires = [
+    # Add your cross-platform app requirements here
+]
+test_requires = [
+    # Add your cross-platform test requirements here
+]
+
+[tool.briefcase.app.ffpm.macOS]
+universal_build = true
+requires = [
+    # Add your macOS-specific app requirements here
+]
+
+[tool.briefcase.app.ffpm.linux]
+requires = [
+    # Add your Linux-specific app requirements here
+]
+
+[tool.briefcase.app.ffpm.linux.system.debian]
+system_requires = [
+    # Add any system packages needed at build the app here
+]
+
+system_runtime_requires = [
+    # Add any system packages needed at runtime here
+]
+
+[tool.briefcase.app.ffpm.linux.system.rhel]
+system_requires = [
+    # Add any system packages needed at build the app here
+]
+
+system_runtime_requires = [
+    # Add any system packages needed at runtime here
+]
+
+[tool.briefcase.app.ffpm.linux.system.suse]
+system_requires = [
+    # Add any system packages needed at build the app here
+]
+
+system_runtime_requires = [
+    # Add any system packages needed at runtime here
+]
+
+[tool.briefcase.app.ffpm.linux.system.arch]
+system_requires = [
+    # Add any system packages needed at build the app here
+]
+
+system_runtime_requires = [
+    # Add any system packages needed at runtime here
+]
+
+[tool.briefcase.app.ffpm.linux.flatpak]
+flatpak_runtime = "org.freedesktop.Platform"
+flatpak_runtime_version = "24.08"
+flatpak_sdk = "org.freedesktop.Sdk"
+
+[tool.briefcase.app.ffpm.windows]
+requires = [
+    # Add your Windows-specific app requirements here
+]
+
+# Mobile deployments
+[tool.briefcase.app.ffpm.iOS]
+requires = [
+    # Add your iOS-specific app requirements here
+]
+
+[tool.briefcase.app.ffpm.android]
+requires = [
+    # Add your Android-specific app requirements here
+]
+
+# Web deployments
+[tool.briefcase.app.ffpm.web]
+requires = [
+    # Add your web-specific app requirements here
+]
+

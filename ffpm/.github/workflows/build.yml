@@ -1,0 +1,67 @@
+name: Build FFPM
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ '*' ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            executable: ffpm
+            icon: assets/ffpm.png
+          - os: windows-latest
+            executable: ffpm.exe
+            icon: assets/ffpm_mac.ico
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install nuitka typer[all] watchdog
+    
+    - name: Build with Nuitka (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        python -m nuitka \
+          --onefile \
+          --standalone \
+          --output-dir=dist \
+          --output-filename=ffpm \
+          --remove-output \
+          --linux-icon=${{ matrix.icon }} \
+          ffpm.py
+    
+    - name: Build with Nuitka (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        python -m nuitka --onefile --standalone --output-dir=dist --output-filename=ffpm --remove-output --windows-icon-from-ico=${{ matrix.icon }} ffpm.py
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ffpm-${{ matrix.os }}
+        path: dist/${{ matrix.executable }}
+    
+    - name: Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/${{ matrix.executable }}
+        name: FFPM ${{ github.ref_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
