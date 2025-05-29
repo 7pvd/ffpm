@@ -1,0 +1,42 @@
+[project]
+name = "ffpm"
+description = "Simple Firefox profile manager, including import/export. Specially, you can use this tool to monitor a directory changes before/after action(s)."
+license="GPLv3"
+dependencies = [
+    "typer[all]",
+    "zipfile",
+    "shutil",
+    "watchdog"
+]
+author = [
+    {"name": "Zuko", "email" : "tansautn@gmail.com", "github": "https://github.com/tansautn"}
+]
+keywords = [
+    "firefox profile",
+    "gecko profile",
+    "firefox profile manager",
+    "import profile",
+    "export profile",
+    "watch profile",
+    "directory watcher"
+]
+requires-python = ">= 3.9"
+topics = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Framework :: Celery",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Topic :: System :: Archiving",
+    "Topic :: System :: Archiving :: Backup",
+    "Topic :: System :: Monitoring",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+    "Topic :: System :: Recovery Tools",
+    "Topic :: System :: Installation/Setup",
+]
+[project.scripts]
+ffpm = "ffpm:main"
