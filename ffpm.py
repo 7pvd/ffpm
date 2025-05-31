@@ -33,6 +33,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #              * * * * * * * * * * * * * * * * * * * * *
 import subprocess
 import sys
+from functools import cache
 
 from typing_extensions import Annotated
 
@@ -61,6 +62,7 @@ import csv
 
 import signal
 from datetime import datetime
+import typeguard
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -69,7 +71,7 @@ app = typer.Typer(invoke_without_command=True)
 FIREFOX_DIR = Path.home() / ".mozilla" / "firefox"  # Linux/macOS
 PROFILES_INI = FIREFOX_DIR / "profiles.ini"
 BACKUP_DIR = Path.home() / "firefox-profile-backups"
-
+typeguard.install_import_hook('ffpm')
 
 def get_profile_path(profile_name_or_path: str) -> Path:
     path = Path(profile_name_or_path).expanduser().resolve()
@@ -324,11 +326,30 @@ def watch(profile_name: str = typer.Argument(...), out: str = "watch-log.csv"):
 
 def _ensureBakDir():
     import os
-    os.makedirs(BACKUP_DIR)
+    if not BACKUP_DIR.exists():
+        os.makedirs(BACKUP_DIR)
 
+
+def _logo(_):
+    print("""
+             M\"\"\"\"\"\"\"\"`M            dP
+             Mmmmmm   .M            88
+             MMMMP  .MMM  dP    dP  88  .dP   .d8888b.
+             MMP  .MMMMM  88    88  88888"    88'  `88
+             M' .MMMMMMM  88.  .88  88  `8b.  88.  .88
+             M         M  `88888P'  dP   `YP  `88888P'
+             MMMMMMMMMMM    -*-  Created by Zuko  -*-
+
+             * * * * * * * * * * * * * * * * * * * * *
+             * -    - -   F.R.E.E.M.I.N.D   - -    - *
+             * -  Copyright © 2025 (Z) Programing  - *
+             *    -  -  All Rights Reserved  -  -    *
+             * * * * * * * * * * * * * * * * * * * * *
+    """)
 
 @app.command()
 def list():
+    """List available installed profiles"""
     profiles = get_profiles()
     from rich.table import Table
     from rich.console import Console
@@ -361,6 +382,8 @@ def export_profile(name: str, output: Annotated[Path, typer.Argument()] = None):
     if not path or not path.exists():
         typer.echo("Profile not found.")
         raise typer.Exit(1)
+    if output.exists():
+        typer.confirm(f"Output file {str(output)} exists. Overwrite?", abort=True)
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(path):
             for file in files:

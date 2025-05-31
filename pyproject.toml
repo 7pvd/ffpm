@@ -6,6 +6,7 @@ version = "1.0.1"
 dependencies = [
     "typer[all]",
     "watchdog",
+    "typeguard"
 ]
 optional-dependencies=[
     "nuitka>=2.7.5",
