@@ -321,6 +321,10 @@ def watch(profile_name: str = typer.Argument(...), out: str = "watch-log.csv"):
     watcher.start()
 
 
+def _ensureBakDir():
+        import os
+        os.makedirs(BACKUP_DIR)
+
 @app.command()
 def list():
     profiles = get_profiles()
@@ -330,8 +334,15 @@ def list():
 
 @app.command()
 def export_profile(name: str, output: Path):
-    if not output.endswith(".zip"):
-        output = output.with_suffix(".zip")
+    useDefaultDir = True
+    if not output:
+        output = name
+    if not str(output).endswith(".zip"):
+        output = Path(output).with_suffix(".zip")
+        if '/' in str(output) or '\\' in str(output):
+            useDefaultDir = False       
+    output = Path(BACKUP_DIR / output if useDefaultDir else output)
+    _ensureBakDir()
     profiles = get_profiles()
     path = profiles.get(name)
     if not path or not path.exists():
