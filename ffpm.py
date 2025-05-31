@@ -388,6 +388,7 @@ def clean(name: str):
 
 
 def main():
+    # noinspection PyShadowingBuiltins
     exec = sys.executable
     
     if len(sys.argv) == 1:

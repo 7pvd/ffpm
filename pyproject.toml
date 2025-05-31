@@ -4,9 +4,11 @@ description = "Simple Firefox profile manager, including import/export. Speciall
 license = {text = "GPLv3", file = "./LICENSE.txt"}
 version = "1.0.1"
 dependencies = [
-    "nuitka>=2.7.5",
     "typer[all]",
     "watchdog",
+]
+optional-dependencies=[
+    "nuitka>=2.7.5",
 ]
 authors = [
     {name = "Zuko", email = "tansautn@gmail.com", github = "https://github.com/tansautn"}
