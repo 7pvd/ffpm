@@ -18,7 +18,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-
 #              M""""""""`M            dP
 #              Mmmmmm   .M            88
 #              MMMMP  .MMM  dP    dP  88  .dP   .d8888b.
@@ -34,6 +33,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #              * * * * * * * * * * * * * * * * * * * * *
 import subprocess
 import sys
+
+from typing_extensions import Annotated
 
 DEPS = ['typer[all]', None, None, 'watchdog']  # None cuz its built-in
 DEP_CHECK_NAMES = ['typer', 'zipfile', 'shutil', 'watchdog']
@@ -322,25 +323,37 @@ def watch(profile_name: str = typer.Argument(...), out: str = "watch-log.csv"):
 
 
 def _ensureBakDir():
-        import os
-        os.makedirs(BACKUP_DIR)
+    import os
+    os.makedirs(BACKUP_DIR)
+
 
 @app.command()
 def list():
     profiles = get_profiles()
+    from rich.table import Table
+    from rich.console import Console
+    table = Table("Name", "Path")
+    console = Console()
     for name, path in profiles.items():
-        typer.echo(f"{name}: {path}")
+        table.add_row(name, str(path))
+    console.print(table)
 
 
 @app.command()
-def export_profile(name: str, output: Path):
+def export_profile(name: str, output: Annotated[Path, typer.Argument()] = None):
+    """
+    Export a Firefox profile to a zip file
+    Args:
+        name: profile name
+        output: output path, if omitted. It will be {name}.zip, located in ~/firefox-profile-backups
+    """
     useDefaultDir = True
     if not output:
         output = name
     if not str(output).endswith(".zip"):
         output = Path(output).with_suffix(".zip")
         if '/' in str(output) or '\\' in str(output):
-            useDefaultDir = False       
+            useDefaultDir = False
     output = Path(BACKUP_DIR / output if useDefaultDir else output)
     _ensureBakDir()
     profiles = get_profiles()
@@ -357,7 +370,14 @@ def export_profile(name: str, output: Path):
 
 
 @app.command()
-def import_profile(zip_path, name: str):
+def import_profile(zip_path: Annotated[Path, typer.Argument()],
+                   name: Annotated[str, typer.Argument(autocompletion=get_profiles)]):
+    """
+    Import a zip file to a Firefox profile
+    Args:
+        zip_path: path to zip file
+        name: profile name
+    """
     if not (str(zip_path).index('/') == -1) or not (str(zip_path).index('/1') != -1):
         zip_path = get_profile_path(name)
         if not zip_path.exists():
