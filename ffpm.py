@@ -18,7 +18,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-
 #              M""""""""`M            dP
 #              Mmmmmm   .M            88
 #              MMMMP  .MMM  dP    dP  88  .dP   .d8888b.
@@ -34,6 +33,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #              * * * * * * * * * * * * * * * * * * * * *
 import subprocess
 import sys
+from functools import cache
+
+from typing_extensions import Annotated
 
 DEPS = ['typer[all]', None, None, 'watchdog']  # None cuz its built-in
 DEP_CHECK_NAMES = ['typer', 'zipfile', 'shutil', 'watchdog']
@@ -60,6 +62,7 @@ import csv
 
 import signal
 from datetime import datetime
+import typeguard
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -68,7 +71,7 @@ app = typer.Typer(invoke_without_command=True)
 FIREFOX_DIR = Path.home() / ".mozilla" / "firefox"  # Linux/macOS
 PROFILES_INI = FIREFOX_DIR / "profiles.ini"
 BACKUP_DIR = Path.home() / "firefox-profile-backups"
-
+typeguard.install_import_hook('ffpm')
 
 def get_profile_path(profile_name_or_path: str) -> Path:
     path = Path(profile_name_or_path).expanduser().resolve()
@@ -333,11 +336,35 @@ def _ensureBakDir():
         typer.echo(f"❌ Backup directory '{BACKUP_DIR}' is not a directory.")
         raise typer.Exit(1)
 
+
+def _logo(_):
+    print("""
+             M\"\"\"\"\"\"\"\"`M            dP
+             Mmmmmm   .M            88
+             MMMMP  .MMM  dP    dP  88  .dP   .d8888b.
+             MMP  .MMMMM  88    88  88888"    88'  `88
+             M' .MMMMMMM  88.  .88  88  `8b.  88.  .88
+             M         M  `88888P'  dP   `YP  `88888P'
+             MMMMMMMMMMM    -*-  Created by Zuko  -*-
+
+             * * * * * * * * * * * * * * * * * * * * *
+             * -    - -   F.R.E.E.M.I.N.D   - -    - *
+             * -  Copyright © 2025 (Z) Programing  - *
+             *    -  -  All Rights Reserved  -  -    *
+             * * * * * * * * * * * * * * * * * * * * *
+    """)
+
 @app.command()
 def list():
+    """List available installed profiles"""
     profiles = get_profiles()
+    from rich.table import Table
+    from rich.console import Console
+    table = Table("Name", "Path")
+    console = Console()
     for name, path in profiles.items():
-        typer.echo(f"{name}: {path}")
+        table.add_row(name, str(path))
+    console.print(table)
 
 
 @app.command(name="export")
@@ -345,6 +372,12 @@ def export_profile(
     name: str,
     output: Path = typer.Option(None, "--output", "-o", help="Output zip file (optional)")
 ):
+    """
+    Export a Firefox profile to a zip file
+    Args:
+        name: profile name
+        output: output path, if omitted. It will be {name}.zip, located in ~/firefox-profile-backups
+    """
     useDefaultDir = True
     if not output:
         output = name
@@ -359,6 +392,8 @@ def export_profile(
     if not path or not path.exists():
         typer.echo(f"❌ Profile '{name}' visible in 'profiles.ini' but not found in file system.")
         raise typer.Exit(1)
+    if output.exists():
+        typer.confirm(f"Output file {str(output)} exists. Overwrite?", abort=True)
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(path):
             for file in files:
@@ -382,6 +417,12 @@ def import_profile(
     if not zip_path.exists() and not str(zip_path).endswith(".zip"):
         zip_path = zip_path.with_suffix(".zip")
     isRelative = not (str(zip_path).count('/') == 0) or (str(zip_path).count('\\') == 0)
+    """
+    Import a zip file to a Firefox profile
+    Args:
+        zip_path: path to zip file
+        name: profile name
+    """
     if not zip_path.exists():
         if isRelative:
             candidates = [
@@ -425,6 +466,7 @@ def clean(name: str):
 
 
 def main():
+    # noinspection PyShadowingBuiltins
     exec = sys.executable
     
     if len(sys.argv) == 1:
