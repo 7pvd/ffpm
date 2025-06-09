@@ -181,6 +181,11 @@ def get_profiles():
                 profiles[current["Name"]] = FIREFOX_DIR / current["Path"]
     return profiles
 
+def ensure_builder(builder_name: str):
+    try:
+        __import__(builder_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", builder_name])
 
 @app.command()
 def build(
@@ -194,32 +199,35 @@ def build(
     if getattr(sys, 'frozen', False) or hasattr(sys, '_MEIPASS'):
         typer.echo("❌ Build command not available in built executable")
         raise typer.Exit(1)
-    
-    # Activate virtual environment if exists
+
+    builder = builder.lower()
+    if builder not in ("pyinstaller", "nuitka", "briefcase"):
+        typer.echo("❌ Unsupported builder. Use 'pyinstaller', 'nuitka', or 'briefcase'.")
+        raise typer.Exit(1)
+
+
     venv_path = Path(".venv")
     env = os.environ.copy()
     if venv_path.exists():
-        if os.name == 'nt':  # Windows
+        if os.name == 'nt':
             venv_bin = venv_path / "Scripts"
             venv_site_packages = venv_path / "Lib" / "site-packages"
-        else:  # Linux/macOS
+        else:
             venv_bin = venv_path / "bin"
-            # Find Python version dynamically
             python_dirs = list((venv_path / "lib").glob("python*"))
             if python_dirs:
                 venv_site_packages = python_dirs[0] / "site-packages"
             else:
-                venv_site_packages = venv_path / "lib" / "python3.11" / "site-packages"  # fallback
-        
-        # Prepend venv to PATH and PYTHONPATH
+                venv_site_packages = venv_path / "lib" / "python3.11" / "site-packages"
         env["PATH"] = str(venv_bin) + os.pathsep + env.get("PATH", "")
         env["PYTHONPATH"] = str(venv_site_packages) + os.pathsep + env.get("PYTHONPATH", "")
         typer.echo(f"🐍 Using virtual environment: {venv_bin}")
         typer.echo(f"📦 Python packages from: {venv_site_packages}")
     
     builder = builder.lower()
+    ensure_builder(builder)
     script_file = Path(sys.argv[0]).resolve()
-    
+
     if builder == "pyinstaller":
         typer.echo("🔧 Building with PyInstaller...")
         try:
@@ -297,10 +305,6 @@ def build(
         except subprocess.CalledProcessError:
             typer.echo("❌ Build failed with Briefcase")
             raise typer.Exit(1)
-    
-    else:
-        typer.echo("❌ Unsupported builder. Use 'pyinstaller', 'nuitka', or 'briefcase'.")
-        raise typer.Exit(1)
 
 
 @app.command()
@@ -322,8 +326,12 @@ def watch(profile_name: str = typer.Argument(...), out: str = "watch-log.csv"):
 
 
 def _ensureBakDir():
-        import os
+    import os
+    if not BACKUP_DIR.exists():
         os.makedirs(BACKUP_DIR)
+    elif not BACKUP_DIR.is_dir():
+        typer.echo(f"❌ Backup directory '{BACKUP_DIR}' is not a directory.")
+        raise typer.Exit(1)
 
 @app.command()
 def list():
@@ -332,36 +340,65 @@ def list():
         typer.echo(f"{name}: {path}")
 
 
-@app.command()
-def export_profile(name: str, output: Path):
+@app.command(name="export")
+def export_profile(
+    name: str,
+    output: Path = typer.Option(None, "--output", "-o", help="Output zip file (optional)")
+):
     useDefaultDir = True
     if not output:
         output = name
     if not str(output).endswith(".zip"):
         output = Path(output).with_suffix(".zip")
         if '/' in str(output) or '\\' in str(output):
-            useDefaultDir = False       
+            useDefaultDir = False
     output = Path(BACKUP_DIR / output if useDefaultDir else output)
     _ensureBakDir()
     profiles = get_profiles()
     path = profiles.get(name)
     if not path or not path.exists():
-        typer.echo("Profile not found.")
+        typer.echo(f"❌ Profile '{name}' visible in 'profiles.ini' but not found in file system.")
         raise typer.Exit(1)
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(path):
             for file in files:
                 full_path = os.path.join(root, file)
-                zipf.write(full_path, os.path.relpath(full_path, start=path))
+                try:
+                    zipf.write(full_path, os.path.relpath(full_path, start=path))
+                except PermissionError as e:
+                    if ".lock" in str(e):
+                        typer.echo("❌ Firefox is running or a .lock file cannot be read. Please close Firefox and try again.")
+                        raise typer.Exit(1)
+                    else:
+                        raise
     typer.echo(f"Exported to {output}")
 
 
-@app.command()
-def import_profile(zip_path, name: str):
-    if not (str(zip_path).index('/') == -1) or not (str(zip_path).index('/1') != -1):
-        zip_path = get_profile_path(name)
-        if not zip_path.exists():
-            typer.echo("Profile not found.")
+@app.command(name="import")
+def import_profile(
+    zip_path: Path = typer.Argument(..., help="Path to the profile zip file"),
+    name: str = typer.Option(None, "--name", "-n", help="Profile name (optional, defaults to zip file basename)")
+):
+    if not zip_path.exists() and not str(zip_path).endswith(".zip"):
+        zip_path = zip_path.with_suffix(".zip")
+    isRelative = not (str(zip_path).count('/') == 0) or (str(zip_path).count('\\') == 0)
+    if not zip_path.exists():
+        if isRelative:
+            candidates = [
+                BACKUP_DIR / zip_path,
+                Path.cwd() / zip_path,
+                Path.home() / zip_path
+            ]
+        for candidate in candidates:
+            if candidate.exists():
+                zip_path = candidate
+                break
+        else:
+            typer.echo("Zip file not found in backup, current, or home directory.")
+            raise typer.Exit(1)
+    else:
+        typer.echo("Zip file not found.")
+        raise typer.Exit(1)
     dest_dir = FIREFOX_DIR / f"{name}"
     if dest_dir.exists():
         typer.confirm("Profile exists. Overwrite?", abort=True)
