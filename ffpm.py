@@ -37,8 +37,8 @@ from functools import cache
 
 from typing_extensions import Annotated
 
-DEPS = ['typer[all]', None, None, 'watchdog']  # None cuz its built-in
-DEP_CHECK_NAMES = ['typer', 'zipfile', 'shutil', 'watchdog']
+DEPS = ['typer[all]', None, None, 'watchdog', 'typeguard']  # None cuz its built-in
+DEP_CHECK_NAMES = ['typer', 'zipfile', 'shutil', 'watchdog', 'typeguard']
 
 
 def ensure_deps():
@@ -46,7 +46,8 @@ def ensure_deps():
         if dep not in globals():
             try:
                 globals()[dep] = __import__(dep)
-            except ImportError:
+            except ModuleNotFoundError:
+                print(f"Installing {dep}")
                 subprocess.check_call([sys.executable, "-m", "pip", "install", DEPS[idx]])
                 __import__(dep)
 
@@ -93,7 +94,7 @@ def detect_windows_paths():
     if os.name == 'nt':
         FIREFOX_DIR = Path(os.environ['APPDATA']) / "Mozilla" / "Firefox"
         PROFILES_INI = FIREFOX_DIR / "profiles.ini"
-        BACKUP_DIR = Path(os.environ['USERPROFILE']) / "firefox-profile-backups"
+        BACKUP_DIR = Path(os.environ['USERPROFILE']) / ".firefox-profile-backups"
     else:
         print('is another system supported?')
 
@@ -187,7 +188,7 @@ def get_profiles():
 def ensure_builder(builder_name: str):
     try:
         __import__(builder_name)
-    except ImportError:
+    except ModuleNotFoundError:
         subprocess.check_call([sys.executable, "-m", "pip", "install", builder_name])
 
 @app.command()
@@ -337,7 +338,7 @@ def _ensureBakDir():
         raise typer.Exit(1)
 
 
-def _logo(_):
+def _logo():
     print("""
              M\"\"\"\"\"\"\"\"`M            dP
              Mmmmmm   .M            88
@@ -475,6 +476,7 @@ def main():
         args = []
         if 'py' in str(exec):
             args.append(sys.argv[0])
+        _logo()
         subprocess.run([exec, *args, "--help"])
         return 0
     app(prog_name="ffpm")
