@@ -431,17 +431,17 @@ def import_profile(
                 Path.cwd() / zip_path,
                 Path.home() / zip_path
             ]
-        for candidate in candidates:
-            if candidate.exists():
-                zip_path = candidate
-                break
+            for candidate in candidates:
+                if candidate.exists():
+                    zip_path = candidate
+                    break
         else:
             typer.echo("Zip file not found in backup, current, or home directory.")
             raise typer.Exit(1)
     else:
         typer.echo("Zip file not found.")
         raise typer.Exit(1)
-    dest_dir = FIREFOX_DIR / f"{name}"
+    dest_dir = FIREFOX_DIR /'Profiles' / f"{name}"
     if dest_dir.exists():
         typer.confirm("Profile exists. Overwrite?", abort=True)
         shutil.rmtree(dest_dir)
