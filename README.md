@@ -1,5 +1,5 @@
 <a href="http://zuko.pro/">
-    <img src="https://avatars0.githubusercontent.com/u/6666271?v=3&s=96" alt="Z-Logo"
+    <img src="https://github.com/user-attachments/assets/9fb5d9ef-bc78-4552-88e0-a053a5e923a8" alt="Z-Logo"
          title="Halu Universe" align="right" />
 </a>
 # ffpm
@@ -26,7 +26,7 @@ Simple Firefox Profile Manager, including Import/Export
 
 For most users, download the latest pre-built binary from the [Releases page](https://github.com/7pvd/ffpm/releases).  
 No Python setup is required—just download and run the binary appropriate for your platform.
-Built binaries was tested and confirmed working on Windows 10 & Debian 11.
+Built binaries was tested and confirmed working on Windows 10 & ~Debian 11~.
 
 ### Development: Run from Source
 
@@ -39,23 +39,28 @@ pip install typer watchdog nuitka
 python ffpm.py [OPTIONS]
 ```
 
-## Example Commands
+## Available Commands
 
 - List profiles:
   ```bash
   ffpm list
   ```
+  
+- Clean cache from a profile:
+  ```bash
+  ffpm clean <name>
+  ```
 - Export a profile:
   ```bash
-  ffpm export --profile <profile_name> --output <output_path>
+  ffpm export <profile_name> --output <optional_output_path>
   ```
 - Import a profile:
   ```bash
-  ffpm import --input <input_path> --name <name>
+  ffpm import <zip_path> --name <optional_name>
   ```
 - Monitor directory changes:
   ```bash
-  ffpm monitor --dir <directory_path>
+  ffpm monitor <directory_path>
   ```
 
 ## Requirements (for development)
