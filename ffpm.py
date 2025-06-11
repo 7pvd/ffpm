@@ -340,19 +340,19 @@ def _ensureBakDir():
 
 def _logo():
     print("""
-             M\"\"\"\"\"\"\"\"`M            dP
-             Mmmmmm   .M            88
-             MMMMP  .MMM  dP    dP  88  .dP   .d8888b.
-             MMP  .MMMMM  88    88  88888"    88'  `88
-             M' .MMMMMMM  88.  .88  88  `8b.  88.  .88
-             M         M  `88888P'  dP   `YP  `88888P'
-             MMMMMMMMMMM    -*-  Created by Zuko  -*-
-
-             * * * * * * * * * * * * * * * * * * * * *
-             * -    - -   F.R.E.E.M.I.N.D   - -    - *
-             * -  Copyright © 2025 (Z) Programing  - *
-             *    -  -  All Rights Reserved  -  -    *
-             * * * * * * * * * * * * * * * * * * * * *
+                                           M\"\"\"\"\"\"\"\"`M            dP
+                                           Mmmmmm   .M            88
+                                           MMMMP  .MMM  dP    dP  88  .dP   .d8888b.
+                                           MMP  .MMMMM  88    88  88888"    88'  `88
+                                           M' .MMMMMMM  88.  .88  88  `8b.  88.  .88
+                                           M         M  `88888P'  dP   `YP  `88888P'
+                                           MMMMMMMMMMM    -*-  Created by Zuko  -*-
+                              
+                                           * * * * * * * * * * * * * * * * * * * * *
+                                           * -    - -      F.F.P.M       - -     - *
+                                           * -  Copyright © 2025 (Z) Programing  - *
+                                           *    -  -  All Rights Reserved  -  -    *
+                                           * * * * * * * * * * * * * * * * * * * * *
     """)
 
 @app.command()
@@ -374,10 +374,9 @@ def export_profile(
     output: Path = typer.Option(None, "--output", "-o", help="Output zip file (optional)")
 ):
     """
-    Export a Firefox profile to a zip file
-    Args:
-        name: profile name
-        output: output path, if omitted. It will be {name}.zip, located in ~/firefox-profile-backups
+    Export a Firefox profile to a zip file\n
+        name: profile name\n
+        output: output path, if omitted. It will be {name}.zip, located in ~/.firefox-profile-backups
     """
     useDefaultDir = True
     if not output:
@@ -400,6 +399,7 @@ def export_profile(
             for file in files:
                 full_path = os.path.join(root, file)
                 try:
+                    typer.echo(f"Writing {full_path} to {output}")
                     zipf.write(full_path, os.path.relpath(full_path, start=path))
                 except PermissionError as e:
                     if ".lock" in str(e):
@@ -417,12 +417,13 @@ def import_profile(
 ):
     if not zip_path.exists() and not str(zip_path).endswith(".zip"):
         zip_path = zip_path.with_suffix(".zip")
+    if not name:
+        name = zip_path.stem
     isRelative = not (str(zip_path).count('/') == 0) or (str(zip_path).count('\\') == 0)
     """
-    Import a zip file to a Firefox profile
-    Args:
-        zip_path: path to zip file
-        name: profile name
+    Import a zip file to a Firefox profile\n
+        zip_path: path to zip file\n
+        name: profile name\n
     """
     if not zip_path.exists():
         if isRelative:
@@ -435,18 +436,35 @@ def import_profile(
                 if candidate.exists():
                     zip_path = candidate
                     break
+            else:
+                typer.echo("Zip file not found in backup, current, or home directory.")
+                raise typer.Exit(1)
         else:
             typer.echo("Zip file not found in backup, current, or home directory.")
             raise typer.Exit(1)
-    else:
-        typer.echo("Zip file not found.")
-        raise typer.Exit(1)
-    dest_dir = FIREFOX_DIR /'Profiles' / f"{name}"
+    dest_dir = FIREFOX_DIR / 'Profiles' / f"{name}"
     if dest_dir.exists():
         typer.confirm("Profile exists. Overwrite?", abort=True)
         shutil.rmtree(dest_dir)
     with zipfile.ZipFile(zip_path, 'r') as zipf:
+        typer.echo(f"Extracting to {dest_dir}")
         zipf.extractall(dest_dir)
+    # Add to profiles.ini
+    if PROFILES_INI.exists():
+        import configparser
+        config = configparser.RawConfigParser()
+        config.read(PROFILES_INI)
+        # Find next available profile index
+        indices = [int(s[7:]) for s in config.sections() if s.startswith("Profile") and s[7:].isdigit()]
+        next_idx = max(indices) + 1 if indices else 0
+        section = f"Profile{next_idx}"
+        config.add_section(section)
+        config.set(section, "Name", name)
+        config.set(section, "IsRelative", "1")
+        rel_path = f"Profiles/{name}"
+        config.set(section, "Path", rel_path)
+        with PROFILES_INI.open("w") as f:
+            config.write(f)
     typer.echo(f"Imported profile as '{name}' at {dest_dir}")
 
 
