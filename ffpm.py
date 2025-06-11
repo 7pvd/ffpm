@@ -337,6 +337,9 @@ def _ensureBakDir():
         typer.echo(f"❌ Backup directory '{BACKUP_DIR}' is not a directory.")
         raise typer.Exit(1)
 
+def _backupProfileIni():
+    typer.echo("Backing up profiles.ini...")
+    shutil.copyfile(PROFILES_INI, PROFILES_INI.with_suffix(".bak"))
 
 def _logo():
     print("""
@@ -392,6 +395,7 @@ def export_profile(
     if not path or not path.exists():
         typer.echo(f"❌ Profile '{name}' visible in 'profiles.ini' but not found in file system.")
         raise typer.Exit(1)
+    _backupProfileIni()
     if output.exists():
         typer.confirm(f"Output file {str(output)} exists. Overwrite?", abort=True)
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as zipf:
