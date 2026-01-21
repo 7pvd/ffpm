@@ -457,6 +457,7 @@ def import_profile(
     if PROFILES_INI.exists():
         import configparser
         config = configparser.RawConfigParser()
+        config.optionxform = str
         config.read(PROFILES_INI)
         # Find next available profile index
         indices = [int(s[7:]) for s in config.sections() if s.startswith("Profile") and s[7:].isdigit()]
@@ -468,7 +469,7 @@ def import_profile(
         rel_path = f"Profiles/{name}"
         config.set(section, "Path", rel_path)
         with PROFILES_INI.open("w") as f:
-            config.write(f)
+            config.write(f, space_around_delimiters=False)
     typer.echo(f"Imported profile as '{name}' at {dest_dir}")
 
 
